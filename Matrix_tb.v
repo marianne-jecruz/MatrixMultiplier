@@ -19,7 +19,7 @@ module Systolic_Matrix_tb();
         b00 = 0;
     end
     
-    always #5 clk = ~clk;
+    always #10 clk = ~clk;
     
     initial begin
         reset = 1;
@@ -44,39 +44,39 @@ module Systolic_Matrix_tb();
      
     end
     
-    Matrix DUT( clk, 
-                reset, 
-                start, 
-                a00, 
-                a01, 
-                a02, 
-                a10, 
-                a11, 
-                a12, 
-                a20, 
-                a21, 
-                a22, 
-                b00, 
-                b01, 
-                b02, 
-                b10, 
-                b11, 
-                b12, 
-                b20, 
-                b21, 
-                b22,
+    matrix_multiplier DUT( .clk(clk), 
+                .reset(reset), 
+                .start(start), 
+                .a00(a00), 
+                .a01(a01), 
+                .a02(a02), 
+                .a10(a10), 
+                .a11(a11), 
+                .a12(a12), 
+                .a20(a20), 
+                .a21(a21), 
+                .a22(a22), 
+                .b00(b00), 
+                .b01(b01), 
+                .b02(b02), 
+                .b10(b10), 
+                .b11(b11), 
+                .b12(b12), 
+                .b20(b20), 
+                .b21(b21), 
+                .b22(b22),
                 //make sure the above wires/ports are identicaly
                 
                 //You can choose not to have below wires/ports in your design
-                M1_out, 
-                M2_out, 
-                M3_out, 
-                M4_out, 
-                M5_out, 
-                M6_out, 
-                M7_out, 
-                M8_out, 
-                M9_out, 
-                done); 
+                .M0_out(M1_out), 
+                .M1_out(M2_out), 
+                .M2_out(M3_out), 
+                .M3_out(M4_out), 
+                .M4_out(M5_out), 
+                .M5_out(M6_out), 
+                .M6_out(M7_out), 
+                .M7_out(M8_out), 
+                .M8_out(M9_out), 
+                .done(done)); 
     
 endmodule
