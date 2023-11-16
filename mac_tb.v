@@ -22,7 +22,8 @@
 
 module mac_tb;
     reg clk;
-    reg [7:0] arrA, arrB [2:0];
+    reg [7:0] arrA [2:0];
+    reg [7:0] arrB [2:0];
     reg [7:0] a, b;
     wire [7:0] a_pass, b_pass, Mn_out;
     
@@ -33,13 +34,14 @@ module mac_tb;
     initial begin
         
         arrA[0] = 8'b00100000; //0.5
-        arrA[1] = 8'b00100000; //0.5
+        arrA[1] = 8'b00010000; //0.25
         arrA[2] = 8'b00110000; //1
         
-        arrB[0] = 8'b00110000; //1
+        arrB[0] = 8'b00110100; //1.25
         arrB[1] = 8'b01000100; //2.5
         arrB[2] = 8'b01000100; //2.5
     
+        k = 0;
         j = 0;
         clk = 0;
         a = 0;
@@ -49,12 +51,15 @@ module mac_tb;
             #10
             clk = ~clk;
             j = j + 1;
-            if (j >= 10) begin
-                a = arrA[k];
-                b = arrB[k];
-                k = k + 1;
-                j = 0;
-            end
+        end
+    end
+    
+    always@(posedge clk) begin
+        if (j >= 10) begin
+            a = arrA[k];
+            b = arrB[k];
+            k = k + 1;
+            j = 0;
         end
     end
     
