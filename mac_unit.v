@@ -108,7 +108,7 @@ module mac_unit(clk, a, b, a_pass, b_pass, Mn_out);
             sum_reg = accumulator_fract + fract_out;
             while(sum_reg >= 16) begin
                 sum_reg = sum_reg >> 1;
-                exp_reg = exp_reg + 1;
+                accumulator_exp = accumulator_exp + 1;
             end
             accumulator_fract = sum_reg[3:0];
         end
