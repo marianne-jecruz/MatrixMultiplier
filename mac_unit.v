@@ -76,13 +76,14 @@ module mac_unit(clk, a, b, a_pass, b_pass, Mn_out);
         exp_reg = exp_a + exp_b; //generate new biased exponent bits
     
         product_reg = fract_a * fract_b;
-        while(product_reg >= 16) begin
+        while(product_reg >= 32) begin
             product_reg = product_reg >> 1;
             exp_reg = exp_reg + 1;
         end
+        exp_reg = exp_reg + 1; //for some reason, exponent is 1 off if we stop shifting when >= 32 (4 bits for fraction)
         exp_out = exp_reg[2:0];
         
-        fract_out = {product_reg[2:0], 1'b0};
+        fract_out = product_reg[3:0];
             
         numToAdd = {sign_out, exp_out, fract_out};
     
