@@ -44,19 +44,21 @@ module matrix_multiplier(
     reg [7:0] a2_input;
     reg [7:0] b2_input;
     
-    reg [7:0] A_arr0[2:0];
-    reg [7:0] A_arr1[2:0];
-    reg [7:0] A_arr2[2:0];
+    wire [7:0] A_arr0[2:0];
+    wire [7:0] A_arr1[2:0];
+    wire [7:0] A_arr2[2:0];
     
-    reg [7:0] B_arr0[2:0];
-    reg [7:0] B_arr1[2:0];
-    reg [7:0] B_arr2[2:0];
+    wire [7:0] B_arr0[2:0];
+    wire [7:0] B_arr1[2:0];
+    wire [7:0] B_arr2[2:0];
     
     wire [7:0] a_pass[5:0];
     wire [7:0] b_pass[5:0];
     
     reg prop_flag1;
     reg prop_flag2;
+    reg prop_flag1_nxt;
+    reg prop_flag2_nxt;
     
     initial begin
         i = 0;
@@ -64,50 +66,54 @@ module matrix_multiplier(
         k = 0;
         
         done = 0;
-        prop_flag1 = 0;
-        prop_flag2 = 0;
-    
-        A_arr0[0] = a00;
-        A_arr0[1] = a01;
-        A_arr0[2] = a02;
-        
-        A_arr1[0] = a10;
-        A_arr1[1] = a11;
-        A_arr1[2] = a12;
-        
-        A_arr2[0] = a20;
-        A_arr2[1] = a21;
-        A_arr2[2] = a22;
-        
-        B_arr0[0] = b00;
-        B_arr0[1] = b01;
-        B_arr0[2] = b02;
-        
-        B_arr1[0] = b10;
-        B_arr1[1] = b11;
-        B_arr1[2] = b12;
-        
-        B_arr2[0] = b20;
-        B_arr2[1] = b21;
-        B_arr2[2] = b22;
+        prop_flag1_nxt = 0;
+        prop_flag2_nxt = 0;
     end
+    
+    //pass in A values by row
+    assign A_arr0[0] = a00;
+    assign A_arr0[1] = a01;
+    assign A_arr0[2] = a02;
+    
+    assign A_arr1[0] = a10;
+    assign A_arr1[1] = a11;
+    assign A_arr1[2] = a12;
+        
+    assign A_arr2[0] = a20;
+    assign A_arr2[1] = a21;
+    assign A_arr2[2] = a22;
+    
+    //pass in B values by column
+    assign B_arr0[0] = b00;
+    assign B_arr0[1] = b10;
+    assign B_arr0[2] = b20;
+        
+    assign B_arr1[0] = b01;
+    assign B_arr1[1] = b11;
+    assign B_arr1[2] = b21;
+        
+    assign B_arr2[0] = b02;
+    assign B_arr2[1] = b12;
+    assign B_arr2[2] = b22;
     
     always@(posedge clk) begin
         if(i <= 2) begin
             a0_input = A_arr0[i];
             b0_input = B_arr0[i];
-            prop_flag1 = 1;
+            prop_flag1_nxt = 1;
             i = i + 1;
         end
+        
     end
     
     always@(posedge clk) begin
         if(prop_flag1 && (j <= 2)) begin
             a1_input = A_arr1[j];
             b1_input = B_arr1[j];
-            prop_flag2 = 1;
+            prop_flag2_nxt = 1;
             j = j + 1;
         end
+        prop_flag1 = prop_flag1_nxt;
     end
     
     always@(posedge clk) begin
@@ -116,6 +122,7 @@ module matrix_multiplier(
             b2_input = B_arr2[k];
             k = k + 1;
         end
+        prop_flag2 = prop_flag2_nxt;
     end
     
     mac_unit mac_units00(
