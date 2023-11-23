@@ -29,13 +29,13 @@ module mac_unit(clk, a, b, a_pass, b_pass, Mn_out);
     //bits for the next value of the accumulator register
     reg accumulator_s;
     reg [2:0] accumulator_exp;
-    reg [3:0] accumulator_fract;
+    reg [4:0] accumulator_fract;//one more bit for leading 1
     reg [7:0] numToAdd;
     
     reg sign_a, sign_b, sign_out;
     reg [2:0] exp_a, exp_b, exp_out;
     reg [4:0] fract_a, fract_b;//one more bit for leading 1
-    reg [3:0] fract_out; //make this one bit larger for overflow;
+    reg [4:0] fract_out; //one more bit for leading 1
     
     reg [11:0] product_reg;
     reg [11:0] sum_reg;
@@ -50,10 +50,19 @@ module mac_unit(clk, a, b, a_pass, b_pass, Mn_out);
         accumulator_s = 0;
         accumulator_exp = 0;
         accumulator_fract = 0;
+        accumulator_all = 0;
     end
     
-    //separate diff parts of floating point num
-    always@(a, b) begin
+    always@(posedge clk) begin
+        Mn_out <= Mn_out_next;
+        a_pass <= a_pass_next;
+        b_pass <= b_pass_next;
+    end
+    
+    //MULTIPLY a and b 
+    always@(posedge clk) begin
+    
+        //separate diff parts of floating point num
         if(a == 0) begin
             numToAdd = 8'b0;
         end
@@ -68,10 +77,8 @@ module mac_unit(clk, a, b, a_pass, b_pass, Mn_out);
             fract_a = {1'b1, a[3], a[2], a[1], a[0]};//add leading 1
             fract_b = {1'b1, b[3], b[2], b[1], b[0]};//add leading 1
         end
-    end
-    
-    //MULTIPLY a and b 
-    always@(sign_a, sign_b, exp_a, exp_b, fract_a, fract_b) begin
+        
+        
         sign_out = sign_a ^ sign_b; //generate new sign bit
         exp_reg = exp_a + exp_b; //generate new biased exponent bits
     
@@ -85,64 +92,96 @@ module mac_unit(clk, a, b, a_pass, b_pass, Mn_out);
         
         fract_out = product_reg[3:0];
             
-        numToAdd = {sign_out, exp_out, fract_out};
+        numToAdd = {sign_out, exp_out, fract_out[3:0]};
     
     //ADD product of a and b to running sum
-        //make exponents the same for addition/subtraction
-        while(!(accumulator_exp == exp_out)) begin
-            if(accumulator_exp < exp_out)begin
-                accumulator_fract = accumulator_fract >> 1;
-                accumulator_exp = accumulator_exp + 1;
-            end
-            else if(accumulator_exp > exp_out) begin
-                fract_out = fract_out >> 1;
-                exp_out = exp_out + 1;
-            end
+        //checks if accumulator is = 0
+        if(accumulator_all == 0) begin
+            accumulator_all = numToAdd;
+            accumulator_fract = {1'b0, fract_out[3:0]};
+            accumulator_exp = exp_out;
+            accumulator_s = sign_out;
         end
-    
-        //if both sign bits are the same == add fraction bits
-        if(accumulator_s ~^ sign_out) begin
-            accumulator_s = accumulator_s & sign_out; //compute sign bit
             
-            //add fraction bits
-            sum_reg = accumulator_fract + fract_out;
-            while(sum_reg >= 16) begin
-                sum_reg = sum_reg >> 1;
-                accumulator_exp = accumulator_exp + 1;
-            end
-            accumulator_fract = sum_reg[3:0];
-        end
-        
-        //sign bits are different == which one has bigger fraction & subtract 
+//------accumulator isn't = 0---------------   
         else begin
-            if(accumulator_fract < fract_out) begin
-                accumulator_fract = fract_out - accumulator_fract;
-                accumulator_s = sign_out;
+            //adds leading 1's to fractions to 
+            accumulator_fract = {1'b1, accumulator_fract[3:0]};
+            fract_out = {1'b1, fract_out[3:0]};
+        
+            //make exponents the same for addition/subtraction
+            while(!(accumulator_exp == exp_out)) begin
+                if(accumulator_exp < exp_out)begin
+                    accumulator_fract = accumulator_fract >> 1;
+                    accumulator_exp = accumulator_exp + 1;
+                end
+                else if(accumulator_exp > exp_out) begin
+                    fract_out = fract_out >> 1;
+                    exp_out = exp_out + 1;
+                end
             end
-            else if(accumulator_fract > fract_out) begin
-                accumulator_fract = accumulator_fract - fract_out;
-                //accumulator sign stays the same
+        
+            //if both sign bits are the same == add fraction bits
+            if(accumulator_s ~^ sign_out) begin
+                accumulator_s = accumulator_s & sign_out; //compute sign bit
+            
+                //add fraction bits
+                sum_reg = accumulator_fract + fract_out;
+                while(sum_reg >= 32) begin
+                    sum_reg = sum_reg >> 1;
+                    accumulator_exp = accumulator_exp + 1;
+                end
+                accumulator_fract = sum_reg[3:0];
             end
-            else if(accumulator_fract == fract_out) begin
-                accumulator_fract = 0;
-                accumulator_exp = 0;
-                accumulator_s = 0;
+        
+            //sign bits are different == which one has bigger fraction & subtract 
+            else begin
+                if(accumulator_fract < fract_out) begin
+                    accumulator_fract = fract_out - accumulator_fract;
+                    accumulator_s = sign_out;
+                    while(!accumulator_fract[4]) begin
+                        accumulator_fract  = accumulator_fract << 1;
+                        accumulator_exp = accumulator_exp - 1;
+                    end
+                end
+                else if(accumulator_fract > fract_out) begin
+                    accumulator_fract = accumulator_fract - fract_out;
+                    //accumulator sign stays the same
+                    while(!accumulator_fract[4]) begin
+                        accumulator_fract  = accumulator_fract << 1;
+                        accumulator_exp = accumulator_exp - 1;
+                    end
+                end
+                else if(accumulator_fract == fract_out) begin
+                    accumulator_fract = 0;
+                    accumulator_exp = 0;
+                    accumulator_s = 0;
+                end
+           
             end
-        end
+            
         accumulator_all = {accumulator_s, accumulator_exp, accumulator_fract[3:0]};
-    end
-    
-    //synchronise accumulator register w clk
-    always@(posedge clk) begin
+        
+        end
+//------accumulator isn't = 0---------------  
+        
         Mn_out_next <= accumulator_all;
         a_pass_next <= a; 
         b_pass_next <= b;
+        
     end
     
-    always@(posedge clk) begin
-        Mn_out <= Mn_out_next;
-        a_pass <= a_pass_next;
-        b_pass <= b_pass_next;
-    end
+//    //synchronise accumulator register w clk
+//    always@(posedge clk) begin
+//        Mn_out_next <= accumulator_all;
+//        a_pass_next <= a; 
+//        b_pass_next <= b;
+//    end
+    
+//    always@(posedge clk) begin
+//        Mn_out <= Mn_out_next;
+//        a_pass <= a_pass_next;
+//        b_pass <= b_pass_next;
+//    end
 
 endmodule
